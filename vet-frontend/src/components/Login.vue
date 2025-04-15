@@ -38,16 +38,14 @@ const togglePasswordVisibility = () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full bg-white rounded-xl shadow-2xl p-10 space-y-8 transform transition-all duration-300 hover:shadow-2xl">
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-100 to-cyan-50 py-12 px-4 sm:px-6 lg:px-8 animate__animated animate__fadeIn">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-10 space-y-8 transform transition-all duration-300 hover:shadow-2xl animate__animated animate__zoomIn animate__faster">
       <div class="text-center">
         <!-- Icono decorativo para la veterinaria -->
-        <div class="mx-auto h-24 w-24 bg-blue-100 rounded-full flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
+        <div class="mx-auto h-24 w-24 bg-teal-100 rounded-full flex items-center justify-center">
+          <img src="https://img.icons8.com/fluency/48/000000/pet.png" alt="Logo" class="h-14 w-14" />
         </div>
-        <h1 class="mt-4 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Veterinaria</h1>
+        <h1 class="mt-4 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-cyan-600">VetCare</h1>
         <p class="mt-3 text-gray-500 text-sm">Gestión de pacientes y servicios veterinarios</p>
       </div>
       
@@ -57,7 +55,7 @@ const togglePasswordVisibility = () => {
       
       <form class="mt-4 space-y-6" @submit.prevent="handleLogin">
         <div v-if="error" 
-          class="p-4 rounded-lg bg-red-50 border-l-4 border-red-500 flex items-center animate__animated animate__headShake">
+          class="p-4 rounded-lg bg-red-50 border-l-4 border-red-500 flex items-center animate__animated animate__shakeX">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 mr-3" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
           </svg>
@@ -78,7 +76,7 @@ const togglePasswordVisibility = () => {
                 v-model="nombreUsuario"
                 type="text"
                 required
-                class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all duration-200"
                 placeholder="Ingrese su nombre de usuario"
               />
             </div>
@@ -97,7 +95,7 @@ const togglePasswordVisibility = () => {
                 v-model="contrasena"
                 :type="showPassword ? 'text' : 'password'"
                 required
-                class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all duration-200"
                 placeholder="Ingrese su contraseña"
               />
               <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -122,13 +120,13 @@ const togglePasswordVisibility = () => {
         
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
             <label for="remember-me" class="ml-2 block text-sm text-gray-700">
               Recordarme
             </label>
           </div>
           <div class="text-sm">
-            <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <a href="#" class="font-medium text-teal-600 hover:text-teal-500">
               ¿Olvidó su contraseña?
             </a>
           </div>
@@ -139,13 +137,13 @@ const togglePasswordVisibility = () => {
             type="submit"
             :disabled="loading"
             class="group relative w-full flex justify-center py-3 px-4 border border-transparent 
-                   rounded-lg text-white font-medium bg-gradient-to-r from-blue-600 to-indigo-600
-                   hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 
-                   focus:ring-offset-2 focus:ring-indigo-500 shadow-lg hover:shadow-xl
-                   transition-all duration-300 transform hover:-translate-y-1"
+                   rounded-lg text-white font-medium bg-gradient-to-r from-teal-500 to-cyan-600
+                   hover:from-teal-600 hover:to-cyan-700 focus:outline-none focus:ring-2 
+                   focus:ring-offset-2 focus:ring-teal-500 shadow-lg hover:shadow-xl
+                   transition-all duration-300 transform hover:-translate-y-1 animate__animated animate__pulse animate__infinite animate__slower"
           >
             <span class="absolute left-0 inset-y-0 flex items-center pl-3" v-if="!loading">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-300 group-hover:text-indigo-200" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-teal-300 group-hover:text-teal-200" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
               </svg>
             </span>
@@ -169,24 +167,3 @@ const togglePasswordVisibility = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Añadir animaciones adicionales si se necesitan */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.animate__headShake {
-  animation: headShake 1s;
-}
-
-@keyframes headShake {
-  0% { transform: translateX(0); }
-  6.5% { transform: translateX(-6px) rotateY(-9deg); }
-  18.5% { transform: translateX(5px) rotateY(7deg); }
-  31.5% { transform: translateX(-3px) rotateY(-5deg); }
-  43.5% { transform: translateX(2px) rotateY(3deg); }
-  50% { transform: translateX(0); }
-}
-</style>
