@@ -71,5 +71,3 @@ Este proyecto está bajo la licencia [MIT](LICENSE).
 
 ¡Gracias por usar **Vet Frontend**! Si tienes preguntas o sugerencias, no dudes en abrir un issue.
 ```
-
-Puedes copiar este contenido y ajustarlo según las necesidades específicas de tu proyecto. Si quieres añadir más detalles o necesitas ayuda con algo más, ¡házmelo saber!
