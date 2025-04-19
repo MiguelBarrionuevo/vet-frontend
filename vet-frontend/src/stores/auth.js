@@ -13,8 +13,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value?.roles || user.value.roles.length === 0) {
       return false;
     }
-    // Comprueba si algún objeto en el array roles tiene la propiedad 'authority' igual a 'ROLE_ADMIN'
-    return user.value.roles.some(role => typeof role === 'object' && role !== null && role.authority === 'ROLE_ADMIN');
+    // Verificar tanto roles como strings u objetos
+    return user.value.roles.some(role =>
+      (typeof role === 'string' && role === 'ROLE_ADMIN') ||
+      (typeof role === 'object' && role !== null && role.authority === 'ROLE_ADMIN')
+    );
   });
 
   async function login(credentials) {
@@ -41,7 +44,9 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = {
         nombreUsuario: authData.nombreUsuario || credentials.nombreUsuario,
         // Guardar solo los nombres de los roles (strings)
-        roles: roleNames
+        roles: roleNames,
+        // Almacenar el rol principal por id para futuras referencias
+        rolId: authData.rolId
       };
 
       localStorage.setItem('token', authData.token);
@@ -65,6 +70,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Nueva función para verificar permisos
+  const hasPermission = (permission) => {
+    return !!user.value?.roles?.includes(permission);
+  };
+
   function logout() {
     token.value = null;
     user.value = null;
@@ -82,7 +92,8 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isAuthenticated,
-    isAdmin, // Exportar la propiedad ajustada
+    isAdmin,
+    hasPermission,  // Exportar la nueva función
     login,
     logout
   };

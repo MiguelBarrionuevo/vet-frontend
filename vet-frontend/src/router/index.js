@@ -28,13 +28,13 @@ const routes = [
     path: '/users/register',
     name: 'UserRegistration',
     component: UserRegistration,
-    meta: { requiresAuth: true, requiresAdmin: true } // Requiere autenticación y rol de admin
+    meta: { requiresAuth: true, requiresPerm: 'USUARIO_CREATE' } // Requiere autenticación y permiso de creación de usuario
   },
   {
     path: '/users',
     name: 'UserList',
     component: UserList,
-    meta: { requiresAuth: true, requiresAdmin: true } // Requiere autenticación y rol de admin
+    meta: { requiresAuth: true, requiresPerm: 'USUARIO_READ' } // Requiere autenticación y permiso de lectura de usuario
   }
 ];
 
@@ -47,16 +47,19 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   const isAuthenticated = authStore.isAuthenticated;
-  const isAdmin = authStore.isAdmin; // Obtener el estado de admin
+  const hasPermission = authStore.hasPermission; // Obtener el estado de permisos
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin); // Verificar si requiere admin
+  const requiresPerm = to.matched.some(record => record.meta.requiresPerm); // Verificar si requiere permisos
+  const requiredPerms = to.matched
+    .filter(record => record.meta.requiresPerm)
+    .map(record => record.meta.requiresPerm);
 
   if (requiresAuth && !isAuthenticated) {
     // Si requiere autenticación y no está autenticado, redirigir a login
     next('/login');
-  } else if (requiresAdmin && !isAdmin) {
-    // Si requiere rol de admin y no lo tiene, redirigir a dashboard o mostrar error
-    console.warn('Acceso denegado: Se requiere rol de administrador.');
+  } else if (requiresPerm && !requiredPerms.some(p => hasPermission(p))) {
+    // Si requiere permisos y no los tiene, redirigir a dashboard o mostrar error
+    console.warn('Acceso denegado: Permisos insuficientes.');
     next('/dashboard'); // O redirigir a una página de 'acceso denegado'
   } else if (to.path === '/login' && isAuthenticated) {
     // Si intenta ir a login estando autenticado, redirigir a dashboard

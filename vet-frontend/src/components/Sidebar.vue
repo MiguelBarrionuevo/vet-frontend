@@ -146,12 +146,13 @@ const userRoleDisplay = computed(() => {
             Informes
           </RouterLink>
 
-          <!-- Sección de Administración (visible solo para admins) -->
-          <div v-if="authStore.isAdmin" class="pt-4 mt-4 space-y-1 border-t border-gray-200">
+          <!-- Sección de Administración (visible solo si tiene permisos de usuario) -->
+          <div v-if="authStore.hasPermission('USUARIO_READ') || authStore.hasPermission('USUARIO_CREATE')" class="pt-4 mt-4 space-y-1 border-t border-gray-200">
              <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider" id="admin-headline">
                 Administración
              </h3>
              <RouterLink
+                v-if="authStore.hasPermission('USUARIO_READ')"
                 to="/users"
                 class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 active-class="bg-teal-100 text-teal-700"
@@ -162,6 +163,7 @@ const userRoleDisplay = computed(() => {
                 Gestionar Usuarios
              </RouterLink>
              <RouterLink
+                v-if="authStore.hasPermission('USUARIO_CREATE')"
                 to="/users/register"
                 class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 active-class="bg-teal-100 text-teal-700"
