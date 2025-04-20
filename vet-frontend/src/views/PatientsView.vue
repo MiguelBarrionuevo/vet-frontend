@@ -81,7 +81,7 @@ import Sidebar from '../components/Sidebar.vue';
 import PetList from '../components/pets/PetList.vue';
 import PetForm from '../components/pets/PetForm.vue';
 import petService from '../services/petService';
-import clientService from '../services/clientService';
+import { getAllClientes } from '../services/clientService';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -137,7 +137,8 @@ const loadClients = async () => {
   loadingClients.value = true;
   
   try {
-    const data = await clientService.getAllClientes();
+    // Llamar directamente a la función importada
+    const data = await getAllClientes();
     clients.value = data;
   } catch (err) {
     console.error('Error cargando clientes:', err);

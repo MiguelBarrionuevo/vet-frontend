@@ -15,42 +15,32 @@ const handleLogout = () => {
   emit('logout');
 };
 
-// Propiedad computada para mostrar el rol principal del usuario (más robusta)
+// Propiedad computada actualizada para mostrar el rol principal usando rolNombre
 const userRoleDisplay = computed(() => {
-  if (!authStore.user?.roles || authStore.user.roles.length === 0) {
+  // Si tenemos directamente el rolNombre, usarlo
+  if (authStore.user?.rolNombre) {
+    // Formatear el nombre del rol si es necesario
+    return authStore.user.rolNombre.replace('ROLE_', '');
+  }
+  
+  // Fallback al método anterior para compatibilidad
+  if (!authStore.user?.permissions) {
     return 'Usuario';
   }
 
-  const roles = authStore.user.roles;
+  const permissions = authStore.user.permissions;
 
-  // Función auxiliar para obtener el nombre del rol (string) desde string u objeto
-  const getRoleName = (role) => {
-    if (typeof role === 'string') {
-      return role; // Ya es un string (ej: "ROLE_ADMIN")
-    }
-    if (typeof role === 'object' && role !== null && typeof role.authority === 'string') {
-      return role.authority; // Es un objeto (ej: { authority: "ROLE_ADMIN" })
-    }
-    return null; // Formato desconocido
-  };
-
-  // Buscar roles específicos por nombre (ajusta los nombres según tu backend)
-  const hasAdmin = roles.some(role => getRoleName(role) === 'ROLE_ADMIN');
-  const hasVeterinario = roles.some(role => getRoleName(role) === 'ROLE_VETERINARIO');
-  const hasEmpleado = roles.some(role => getRoleName(role) === 'ROLE_EMPLEADO');
+  // Buscar roles específicos por nombre
+  const hasAdmin = permissions.includes('ROLE_ADMIN');
+  const hasVeterinario = permissions.includes('ROLE_VETERINARIO');
+  const hasEmpleado = permissions.includes('ROLE_EMPLEADO');
 
   if (hasAdmin) return 'Administrador';
   if (hasVeterinario) return 'Veterinario';
   if (hasEmpleado) return 'Empleado';
 
-  // Si no es ninguno de los anteriores, toma el primer rol válido y formatea su nombre
-  const firstRoleName = getRoleName(roles[0]);
-  if (firstRoleName) {
-    // Limpiar prefijo y reemplazar guiones bajos
-    return String(firstRoleName).replace(/^ROLE_/, '').replace('_', ' ');
-  }
-
-  return 'Usuario'; // Fallback
+  // Si no es ninguno de los anteriores, mostrar 'Usuario'
+  return 'Usuario';
 });
 </script>
 
@@ -58,7 +48,7 @@ const userRoleDisplay = computed(() => {
   <aside :class="['fixed inset-y-0 left-0 bg-white shadow-lg z-20 w-64 transform transition-transform duration-300 ease-in-out', isSidebarOpen ? 'translate-x-0' : '-translate-x-full', 'lg:translate-x-0']">
     <div class="h-full flex flex-col">
       <div class="flex items-center justify-center h-16 px-4 bg-gradient-to-r from-teal-500 to-cyan-600">
-        <img src="https://img.icons8.com/fluency/48/000000/pet.png" alt="Logo" class="h-10 w-10 mr-2" />
+        <img src="../assets/pet.png" alt="Logo" class="h-10 w-10 mr-2" />
         <span class="text-white text-xl font-bold">VetCare</span>
       </div>
       
@@ -136,8 +126,8 @@ const userRoleDisplay = computed(() => {
             Servicios
           </RouterLink>
           
-          <!-- Sección de Administración (visible solo si tiene permisos de usuario) -->
-          <div v-if="authStore.hasPermission('USUARIO_READ') || authStore.hasPermission('USUARIO_CREATE')" class="pt-4 mt-4 space-y-1 border-t border-gray-200">
+          <!-- Sección de Administración (usando los permisos correctos) -->
+          <div v-if="authStore.hasPermission('USUARIO_READ') || authStore.hasPermission('USUARIO_CREATE') || authStore.hasPermission('ROLE_READ')" class="pt-4 mt-4 space-y-1 border-t border-gray-200">
              <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider" id="admin-headline">
                 Administración
              </h3>
@@ -162,6 +152,19 @@ const userRoleDisplay = computed(() => {
                   <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                 </svg>
                 Registrar Usuario
+             </RouterLink>
+             
+             <!-- Enlace para Gestión de Roles (con el permiso correcto) -->
+             <RouterLink
+                v-if="authStore.hasPermission('ROLE_READ')"
+                to="/roles"
+                class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                active-class="bg-teal-100 text-teal-700"
+             >
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-4 h-5 w-5 text-gray-500 group-[.router-link-active]:text-teal-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                Gestión de Roles
              </RouterLink>
           </div>
         </div>

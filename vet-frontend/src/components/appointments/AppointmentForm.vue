@@ -164,7 +164,8 @@
 
 <script setup>
 import { ref, reactive, computed, defineProps, defineEmits, onMounted, watch } from 'vue';
-import { petService } from '../../services/api';
+// Importar el servicio dedicado para mascotas
+import petService from '../../services/petService';
 import { useAuthStore } from '../../stores/auth';
 import AppointmentServices from './AppointmentServices.vue';
 
@@ -276,17 +277,27 @@ const loadClientPets = async () => {
   loadingPets.value = true;
   
   try {
-    // Corregimos la forma de acceder a la respuesta
-    const response = await petService.getMascotasByClienteId(formData.clienteId);
-    mascotasCliente.value = Array.isArray(response.data) ? response.data : response;
+    // Usar el servicio dedicado petService
+    // Asumiendo que getMascotasByClienteId devuelve directamente el array de datos
+    const pets = await petService.getMascotasByClienteId(formData.clienteId);
+    mascotasCliente.value = Array.isArray(pets) ? pets : [];
     
-    // Si no hay mascota seleccionada y hay mascotas disponibles, seleccionar la primera
-    if (!formData.mascotaId && mascotasCliente.value.length > 0) {
-      formData.mascotaId = mascotasCliente.value[0].id;
+    // Si la mascota previamente seleccionada ya no pertenece al nuevo cliente, deseleccionarla
+    if (formData.mascotaId && !mascotasCliente.value.some(m => m.id === formData.mascotaId)) {
+        formData.mascotaId = '';
     }
+    
+    // Si no hay mascota seleccionada y hay mascotas disponibles, NO seleccionar la primera automáticamente
+    // Dejar que el usuario elija explícitamente
+    // if (!formData.mascotaId && mascotasCliente.value.length > 0) {
+    //   formData.mascotaId = mascotasCliente.value[0].id;
+    // }
+
   } catch (error) {
     console.error('Error al cargar mascotas del cliente:', error);
-    // Mostrar un error al usuario
+    mascotasCliente.value = []; // Limpiar en caso de error
+    formData.mascotaId = ''; // Asegurar que no quede una mascota inválida seleccionada
+    // Mostrar un error al usuario si es necesario
   } finally {
     loadingPets.value = false;
   }

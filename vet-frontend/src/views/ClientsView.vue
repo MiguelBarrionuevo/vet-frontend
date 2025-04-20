@@ -120,7 +120,8 @@ import ClientList from '../components/clients/ClientList.vue';
 import ClientForm from '../components/clients/ClientForm.vue';
 import ClientDetails from '../components/clients/ClientDetails.vue';
 import PetForm from '../components/pets/PetForm.vue';
-import clientService from '../services/clientService';
+// Importar funciones específicas en lugar del objeto por defecto
+import { getAllClientes, updateCliente, createCliente, deleteCliente } from '../services/clientService';
 import petService from '../services/petService';
 
 const router = useRouter();
@@ -165,7 +166,8 @@ const loadClients = async () => {
   error.value = null;
   
   try {
-    const data = await clientService.getAllClientes();
+    // Llamar directamente a la función importada
+    const data = await getAllClientes();
     clients.value = data;
   } catch (err) {
     console.error('Error cargando clientes:', err);
@@ -232,19 +234,19 @@ const saveClient = async (clientData) => {
   
   try {
     if (clientData.id) {
-      // Actualizar cliente existente
-      const updatedClient = await clientService.updateCliente(clientData.id, clientData);
+      // Actualizar cliente existente - llamar directamente a la función importada
+      const updatedClient = await updateCliente(clientData.id, clientData);
       const index = clients.value.findIndex(c => c.id === clientData.id);
       if (index !== -1) {
         clients.value[index] = updatedClient;
       }
     } else {
-      // Crear nuevo cliente
+      // Crear nuevo cliente - llamar directamente a la función importada
       // Asegurarse de que existe fechaRegistro
       if (!clientData.fechaRegistro) {
         clientData.fechaRegistro = new Date().toISOString();
       }
-      const newClient = await clientService.createCliente(clientData);
+      const newClient = await createCliente(clientData);
       clients.value.push(newClient);
     }
     
@@ -263,7 +265,8 @@ const deleteClient = async (cliente) => {
   }
   
   try {
-    await clientService.deleteCliente(cliente.id);
+    // Llamar directamente a la función importada
+    await deleteCliente(cliente.id);
     clients.value = clients.value.filter(c => c.id !== cliente.id);
   } catch (err) {
     console.error('Error eliminando cliente:', err);

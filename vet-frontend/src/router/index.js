@@ -48,6 +48,24 @@ const routes = [
     component: () => import('../views/ServicesView.vue'), // Temporalmente usamos ServicesView
     meta: { requiresAuth: true }
   },
+  {
+    path: '/users',
+    name: 'users',
+    component: () => import('../components/UserList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/users/register',
+    name: 'userRegister',
+    component: () => import('../components/UserRegistration.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/roles',
+    name: 'roles',
+    component: () => import('../views/RolesManagement.vue'),
+    meta: { requiresAuth: true }
+  },
   // 404 - Not Found
   {
     path: '/:pathMatch(.*)*',

@@ -119,8 +119,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { medicalServiceService } from '../../services/api';
-import citaServicioService from '../../services/citaServicioService';
+// Importar el servicio dedicado
+import serviceService from '../../services/serviceService';
+// Importar función nombrada
+import { addServicioToCita } from '../../services/citaServicioService';
 
 const props = defineProps({
   citaId: {
@@ -175,21 +177,25 @@ const totalAmount = computed(() => {
 
 // Formatear precio
 const formatPrice = (price) => {
-  return `$${Number(price || 0).toLocaleString('es-CL')}`;
+  const numericPrice = Number(price);
+  if (isNaN(numericPrice)) {
+    return '$ --';
+  }
+  return `$${numericPrice.toLocaleString('es-CL')}`;
 };
 
 // Cargar servicios disponibles
 const loadAvailableServices = async () => {
   isLoading.value = true;
   error.value = null;
-  
   try {
-    const services = await medicalServiceService.getAllServices();
-    availableServices.value = services;
-    console.log("Servicios cargados:", services);
+    // Usar el servicio dedicado
+    const services = await serviceService.getAllServices();
+    availableServices.value = Array.isArray(services) ? services : [];
   } catch (err) {
     console.error('Error al cargar servicios disponibles:', err);
-    error.value = 'Error al cargar los servicios disponibles. Por favor, inténtelo de nuevo.';
+    error.value = err.message || 'No se pudieron cargar los servicios.';
+    availableServices.value = [];
   } finally {
     isLoading.value = false;
   }
@@ -273,9 +279,9 @@ const saveServices = async () => {
   isSubmitting.value = true;
   
   try {
-    // Guardar cada servicio seleccionado
+    // Guardar cada servicio seleccionado usando la función importada
     for (const service of selectedServices.value) {
-      await citaServicioService.addServicioToCita(service);
+      await addServicioToCita(service);
     }
     
     emit('saved', selectedServices.value);

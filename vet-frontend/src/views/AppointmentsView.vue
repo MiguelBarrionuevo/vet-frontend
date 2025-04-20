@@ -30,11 +30,11 @@
         </header>
 
         <!-- Selector rápido de servicios (modal) -->
-        <div v-if="showQuickServiceSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div v-if="showQuickServiceSelector && selectedAppointment.id" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <QuickServiceSelector 
-              :citaId="selectedAppointment.id" 
-              @cancel="cancelQuickServiceSelector" 
+            <QuickServiceSelector
+              :citaId="selectedAppointment.id"
+              @cancel="cancelQuickServiceSelector"
               @saved="handleQuickServicesAdded"
             />
           </div>
@@ -42,9 +42,9 @@
 
         <!-- Vista principal (lista de citas) -->
         <div v-if="currentView === 'list'">
-          <AppointmentList 
-            :appointments="appointments" 
-            :loading="loading" 
+          <AppointmentList
+            :appointments="filteredAppointments" 
+            :loading="loading"
             :error="error"
             @add-appointment="showAddAppointmentForm"
             @edit-appointment="showEditAppointmentForm"
@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import Sidebar from '../components/Sidebar.vue';
@@ -111,159 +111,228 @@ import AppointmentForm from '../components/appointments/AppointmentForm.vue';
 import AppointmentDetails from '../components/appointments/AppointmentDetails.vue';
 import QuickServiceSelector from '../components/appointments/QuickServiceSelector.vue';
 import appointmentService from '../services/appointmentService';
-import citaServicioService from '../services/citaServicioService';
-import clientService from '../services/clientService';
-import { userService, medicalServiceService } from '../services/api';
+import { userService } from '../services/api';
+import { getAllClientes } from '../services/clientService';
 
 const router = useRouter();
 const authStore = useAuthStore();
-
-// Estado general
-const currentView = ref('list');
 const isSidebarOpen = ref(false);
-const selectedAppointment = ref({});
-const submitting = ref(false);
 
-// Estado para citas
+// Estado principal
 const appointments = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
-// Estado para datos de formulario
-const clientes = ref([]);
+const currentView = ref('list');
+const selectedAppointment = ref({});
+const submitting = ref(false);
 const veterinarios = ref([]);
-const loadingClientes = ref(false);
-const loadingVeterinarios = ref(false);
-
-// Estado adicional para el selector rápido de servicios
+const clientes = ref([]);
+// Estado para el modal de servicios rápidos
 const showQuickServiceSelector = ref(false);
 
-// Verificar autenticación y cargar datos
+// Estado para filtros
+const statusFilter = ref('');
+const dateRangeFilter = ref({ startDate: '', endDate: '' });
+
+// Verificar permisos
+const hasCreatePermission = computed(() => authStore.hasPermission('CITA_CREATE'));
+const hasUpdatePermission = computed(() => authStore.hasPermission('CITA_UPDATE'));
+const hasDeletePermission = computed(() => authStore.hasPermission('CITA_DELETE'));
+
+// Cargar datos al montar
 onMounted(async () => {
   if (!authStore.isAuthenticated) {
     router.push('/login');
     return;
   }
-  
+
+  // Verificar permisos para acceder a esta vista
   if (!authStore.hasPermission('CITA_READ')) {
     router.push('/dashboard');
     return;
   }
-  
-  loadAppointments();
-  
-  // Cargar datos para el formulario (clientes y veterinarios)
-  loadClientes();
-  loadVeterinarios();
+
+  try {
+    // Cargar los datos iniciales en paralelo
+    await Promise.all([
+      loadAppointments(),
+      loadVeterinarios(),
+      loadClientes()
+    ]);
+  } catch (err) {
+    console.error("Error cargando datos iniciales:", err);
+    error.value = "Error al cargar los datos iniciales";
+  }
 });
 
-// Cargar todas las citas
+// Filtrar citas
+const filteredAppointments = computed(() => {
+  if (!appointments.value || !Array.isArray(appointments.value)) return [];
+  
+  let filtered = [...appointments.value];
+  
+  // Filtro por estado
+  if (statusFilter.value) {
+    filtered = filtered.filter(a => a.estado === statusFilter.value);
+  }
+  
+  // Filtro por rango de fechas
+  if (dateRangeFilter.value.startDate) {
+    const startDate = new Date(dateRangeFilter.value.startDate);
+    filtered = filtered.filter(a => new Date(a.fecha) >= startDate);
+  }
+  
+  if (dateRangeFilter.value.endDate) {
+    const endDate = new Date(dateRangeFilter.value.endDate);
+    endDate.setHours(23, 59, 59);
+    filtered = filtered.filter(a => new Date(a.fecha) <= endDate);
+  }
+  
+  // Ordenar por fecha y hora
+  return filtered.sort((a, b) => {
+    const dateA = new Date(a.fecha);
+    const dateB = new Date(b.fecha);
+    
+    if (dateA > dateB) return 1;
+    if (dateA < dateB) return -1;
+    
+    // Si las fechas son iguales, ordenar por hora
+    if (a.hora && b.hora) {
+      // Verificar si hora es un objeto con propiedades hour y minute
+      let timeA, timeB;
+      
+      if (typeof a.hora === 'object' && a.hora !== null) {
+        timeA = (a.hora.hour || 0) * 60 + (a.hora.minute || 0);
+      } else if (typeof a.hora === 'string') {
+        const [hoursA, minutesA] = a.hora.split(':').map(Number);
+        timeA = hoursA * 60 + minutesA;
+      } else {
+        timeA = 0;
+      }
+      
+      if (typeof b.hora === 'object' && b.hora !== null) {
+        timeB = (b.hora.hour || 0) * 60 + (b.hora.minute || 0);
+      } else if (typeof b.hora === 'string') {
+        const [hoursB, minutesB] = b.hora.split(':').map(Number);
+        timeB = hoursB * 60 + minutesB;
+      } else {
+        timeB = 0;
+      }
+      
+      return timeA - timeB;
+    }
+    
+    return 0;
+  });
+});
+
+// Cargar citas
 const loadAppointments = async () => {
   loading.value = true;
   error.value = null;
   
   try {
+    console.log("Cargando citas usando appointmentService...");
     const data = await appointmentService.getAllCitas();
-    appointments.value = data;
+    appointments.value = Array.isArray(data) ? data : [];
+    console.log('Citas cargadas:', appointments.value);
   } catch (err) {
     console.error('Error cargando citas:', err);
-    error.value = 'No se pudieron cargar las citas. Por favor, intente nuevamente.';
+    error.value = 'Error al cargar las citas. Por favor, intente nuevamente.';
+    appointments.value = []; // Inicializar con array vacío para evitar errores
   } finally {
     loading.value = false;
   }
 };
 
-// Cargar todos los clientes para el selector
-const loadClientes = async () => {
-  loadingClientes.value = true;
-  
-  try {
-    const data = await clientService.getAllClientes();
-    clientes.value = data;
-  } catch (err) {
-    console.error('Error cargando clientes:', err);
-    // No establecer error, ya que esto no es crítico para la vista principal
-  } finally {
-    loadingClientes.value = false;
-  }
-};
-
-// Cargar todos los veterinarios para el selector
+// Cargar veterinarios
 const loadVeterinarios = async () => {
-  loadingVeterinarios.value = true;
-  
   try {
     const response = await userService.getVeterinarios();
-    veterinarios.value = response.data || [];
+    // Asegurar que siempre tenemos un array
+    if (response && response.data && Array.isArray(response.data)) {
+      veterinarios.value = response.data;
+    } else if (Array.isArray(response)) {
+      veterinarios.value = response;
+    } else {
+      console.warn("Respuesta de veterinarios no es un array:", response);
+      veterinarios.value = [];
+    }
   } catch (err) {
     console.error('Error cargando veterinarios:', err);
-    // No establecer error, ya que esto no es crítico para la vista principal
-  } finally {
-    loadingVeterinarios.value = false;
+    veterinarios.value = []; // Inicializar con array vacío para evitar errores
   }
 };
 
-// Funciones para filtros
-const filterByStatus = async (status) => {
-  if (!status) {
-    return loadAppointments();
-  }
-  
-  loading.value = true;
-  error.value = null;
-  
+// Cargar clientes
+const loadClientes = async () => {
   try {
-    const data = await appointmentService.getCitasByEstado(status);
-    appointments.value = data;
+    // Usar la función importada directamente
+    const data = await getAllClientes();
+    // Asegurar que siempre tenemos un array
+    if (data && Array.isArray(data)) {
+      clientes.value = data;
+    } else {
+      console.warn("Respuesta de clientes no es un array:", data);
+      clientes.value = [];
+    }
   } catch (err) {
-    console.error(`Error filtrando citas por estado ${status}:`, err);
-    error.value = 'No se pudieron filtrar las citas. Por favor, intente nuevamente.';
-  } finally {
-    loading.value = false;
+    console.error('Error cargando clientes:', err);
+    clientes.value = []; // Inicializar con array vacío para evitar errores
   }
 };
 
-const filterByDateRange = async ({ startDate, endDate }) => {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    const data = await appointmentService.getCitasByFechaRange(startDate, endDate);
-    appointments.value = data;
-  } catch (err) {
-    console.error('Error filtrando citas por rango de fechas:', err);
-    error.value = 'No se pudieron filtrar las citas. Por favor, intente nuevamente.';
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Funciones para navegación
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value;
-};
-
+// Funciones para el Sidebar
 const handleLogout = () => {
   authStore.logout();
   router.push('/login');
 };
 
-// Funciones para gestionar citas
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value;
+};
+
+// Gestión de vistas
+// Renombrar showNewAppointmentForm a showAddAppointmentForm
 const showAddAppointmentForm = () => {
   selectedAppointment.value = {};
   currentView.value = 'form';
 };
 
-const showEditAppointmentForm = (appointment) => {
-  selectedAppointment.value = { ...appointment };
-  currentView.value = 'form';
-};
-
 const showAppointmentDetails = (appointment) => {
-  selectedAppointment.value = { ...appointment };
+  selectedAppointment.value = appointment;
   currentView.value = 'details';
 };
 
+// Renombrar showAppointmentForm a showEditAppointmentForm
+const showEditAppointmentForm = (appointment) => {
+  selectedAppointment.value = appointment;
+  currentView.value = 'form';
+};
+
+// Mostrar/Ocultar vista de servicios rápidos
+const openQuickServiceSelector = (appointment) => {
+  selectedAppointment.value = appointment;
+  showQuickServiceSelector.value = true;
+};
+
+// Añadir función cancelQuickServiceSelector
+const cancelQuickServiceSelector = () => {
+  showQuickServiceSelector.value = false;
+};
+
+// Añadir función handleQuickServicesAdded
+const handleQuickServicesAdded = (addedServices) => {
+  console.log('Servicios rápidos añadidos:', addedServices);
+  showQuickServiceSelector.value = false;
+  // Opcional: Recargar detalles de la cita si es necesario
+  if (currentView.value === 'details') {
+    // Podrías querer actualizar la información en AppointmentDetails
+    // o simplemente confiar en que AppointmentServices se actualiza solo.
+  }
+};
+
+// Guardar cita (crear o actualizar) usando appointmentService
 const saveAppointment = async (appointmentData) => {
   submitting.value = true;
   
@@ -271,120 +340,111 @@ const saveAppointment = async (appointmentData) => {
     let savedAppointment;
     
     if (appointmentData.id) {
-      // Actualizar cita existente
+      // Actualizar usando appointmentService
       savedAppointment = await appointmentService.updateCita(appointmentData.id, appointmentData);
+      
+      // Actualizar en el array local
       const index = appointments.value.findIndex(a => a.id === appointmentData.id);
       if (index !== -1) {
         appointments.value[index] = savedAppointment;
       }
-      currentView.value = 'list';
     } else {
-      // Crear nueva cita
+      // Crear nueva usando appointmentService
       savedAppointment = await appointmentService.createCita(appointmentData);
       appointments.value.push(savedAppointment);
-      
-      // Preguntar si desea agregar servicios ahora
-      const wantToAddServices = confirm("Cita creada correctamente. ¿Desea agregar servicios médicos a esta cita ahora?");
-      
-      if (wantToAddServices) {
-        selectedAppointment.value = savedAppointment;
-        showQuickServiceSelector.value = true;
-      } else {
-        currentView.value = 'list';
-      }
     }
+    
+    currentView.value = 'list';
   } catch (err) {
     console.error('Error guardando cita:', err);
-    alert('Ocurrió un error al guardar la cita. Por favor, revise los datos e intente nuevamente.');
+    alert('Error al guardar la cita. Por favor, revise los datos e intente nuevamente.');
   } finally {
     submitting.value = false;
   }
 };
 
-// Manejar servicios guardados desde el selector rápido
-const handleQuickServicesAdded = (services) => {
-  console.log('Servicios agregados:', services);
-  showQuickServiceSelector.value = false;
-  
-  // Mostrar mensaje y redirigir a la lista
-  alert(`Se agregaron ${services.length} servicios a la cita.`);
-  currentView.value = 'list';
-};
-
-// Cancelar el selector rápido
-const cancelQuickServiceSelector = () => {
-  showQuickServiceSelector.value = false;
-  currentView.value = 'list';
-};
-
+// Eliminar cita usando appointmentService
 const deleteAppointment = async (appointment) => {
   try {
-    // Primero, eliminar todos los servicios asociados a la cita
-    await citaServicioService.removeAllServiciosFromCita(appointment.id);
-    
-    // Luego, eliminar la cita
     await appointmentService.deleteCita(appointment.id);
     appointments.value = appointments.value.filter(a => a.id !== appointment.id);
     
-    // Si está en la vista de detalles, volver a la lista
     if (currentView.value === 'details') {
       currentView.value = 'list';
     }
   } catch (err) {
     console.error('Error eliminando cita:', err);
-    alert('Ocurrió un error al eliminar la cita.');
+    alert('Error al eliminar la cita. Por favor, intente nuevamente.');
   }
 };
 
+// Cancelar cita usando appointmentService
 const cancelAppointment = async (appointment) => {
   try {
-    // Cambiar estado a CANCELADA
-    const updatedAppointment = { 
-      ...appointment,
-      estado: 'CANCELADA'
-    };
+    const updatedAppointment = { ...appointment, estado: 'CANCELADA' };
+    await appointmentService.updateCita(appointment.id, updatedAppointment);
     
-    const result = await appointmentService.updateCita(appointment.id, updatedAppointment);
-    
-    // Actualizar en la lista local
+    // Actualizar en el array local
     const index = appointments.value.findIndex(a => a.id === appointment.id);
     if (index !== -1) {
-      appointments.value[index] = result;
+      appointments.value[index] = { ...appointments.value[index], estado: 'CANCELADA' };
     }
     
-    // Si está en la vista de detalles, actualizar la cita seleccionada
     if (currentView.value === 'details') {
-      selectedAppointment.value = result;
+      // Actualizar la vista de detalles
+      selectedAppointment.value = { ...selectedAppointment.value, estado: 'CANCELADA' };
     }
   } catch (err) {
     console.error('Error cancelando cita:', err);
-    alert('Ocurrió un error al cancelar la cita.');
+    alert('Error al cancelar la cita. Por favor, intente nuevamente.');
   }
 };
 
+// Completar cita usando appointmentService
 const completeAppointment = async (appointment) => {
   try {
-    // Cambiar estado a COMPLETADA
-    const updatedAppointment = { 
-      ...appointment,
-      estado: 'COMPLETADA'
-    };
+    const updatedAppointment = { ...appointment, estado: 'COMPLETADA' };
+    await appointmentService.updateCita(appointment.id, updatedAppointment);
     
-    const result = await appointmentService.updateCita(appointment.id, updatedAppointment);
-    
-    // Actualizar en la lista local
+    // Actualizar en el array local
     const index = appointments.value.findIndex(a => a.id === appointment.id);
     if (index !== -1) {
-      appointments.value[index] = result;
+      appointments.value[index] = { ...appointments.value[index], estado: 'COMPLETADA' };
     }
     
-    // Si está en la vista de detalles, actualizar la cita seleccionada
     if (currentView.value === 'details') {
-      selectedAppointment.value = result;
+      // Actualizar la vista de detalles
+      selectedAppointment.value = { ...selectedAppointment.value, estado: 'COMPLETADA' };
     }
   } catch (err) {
     console.error('Error completando cita:', err);
-    alert('Ocurrió un error al marcar la cita como completada.');
+    alert('Error al completar la cita. Por favor, intente nuevamente.');
   }
+};
+
+// Filtrar por estado
+const filterByStatus = (status) => {
+  statusFilter.value = status;
+};
+
+// Filtrar por rango de fechas
+const filterByDateRange = (dateRange) => {
+  dateRangeFilter.value = dateRange;
+};
+
+// Limpiar filtros
+const clearFilters = () => {
+  statusFilter.value = '';
+  dateRangeFilter.value = { startDate: '', endDate: '' };
+  // No llamar a loadAppointments aquí, la propiedad computada se encargará
+  // loadAppointments();
+};
+
+// Manejar guardado de servicios rápidos (renombrado de handleQuickServiceSaved)
+const handleQuickServiceSaved = () => {
+  // Esta función parece redundante ahora con handleQuickServicesAdded,
+  // la mantenemos por si se usa en otro lugar, pero revisar si es necesaria.
+  // Si no, se puede eliminar junto con su @saved en AppointmentDetails si existe.
+  currentView.value = 'details'; // O quizás volver a la lista?
 };
 </script>

@@ -8,16 +8,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value);
 
-  // Propiedad computada para verificar si es admin (ajustada para la nueva estructura de roles)
+  // Propiedad computada para verificar si es admin
   const isAdmin = computed(() => {
-    if (!user.value?.roles || user.value.roles.length === 0) {
+    if (!user.value?.permissions) {
       return false;
     }
-    // Verificar tanto roles como strings u objetos
-    return user.value.roles.some(role =>
-      (typeof role === 'string' && role === 'ROLE_ADMIN') ||
-      (typeof role === 'object' && role !== null && role.authority === 'ROLE_ADMIN')
-    );
+    // Verificar si tiene el permiso ROLE_ADMIN
+    return user.value.permissions.includes('ROLE_ADMIN');
   });
 
   async function login(credentials) {
@@ -38,19 +35,21 @@ export const useAuthStore = defineStore('auth', () => {
 
       token.value = authData.token;
 
-      // Extraer los nombres de los roles del array de objetos
-      const roleNames = authData.roles?.map(role => role.authority) || [];
+      // Los permisos ahora vienen directamente como un array de strings
+      const permissions = authData.roles || [];
 
       user.value = {
         nombreUsuario: authData.nombreUsuario || credentials.nombreUsuario,
-        // Guardar solo los nombres de los roles (strings)
-        roles: roleNames,
-        // Almacenar el rol principal por id para futuras referencias
-        rolId: authData.rolId
+        // Guardar los permisos tal cual vienen ahora (ya son strings)
+        permissions: permissions,
+        // Mantener roles para compatibilidad
+        roles: permissions,
+        // Almacenar el nombre del rol principal
+        rolNombre: authData.rolNombre || ''
       };
 
       localStorage.setItem('token', authData.token);
-      // Guardar el objeto user simplificado con solo los nombres de roles
+      // Guardar el objeto user con sus permisos
       localStorage.setItem('user', JSON.stringify(user.value));
 
       // Configurar el token para las próximas solicitudes
@@ -70,10 +69,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Nueva función para verificar permisos
-  const hasPermission = (permission) => {
-    return !!user.value?.roles?.includes(permission);
-  };
+  // Función para verificar permisos (no necesita cambios ya que sigue funcionando con strings)
+  function hasPermission(permissionName) {
+    // Si el usuario no existe o no tiene permisos
+    if (!user.value || !user.value.permissions) {
+      return false;
+    }
+    
+    // Verificar si el usuario tiene el permiso específico
+    return user.value.permissions.includes(permissionName);
+  }
 
   function logout() {
     token.value = null;
@@ -93,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     isAdmin,
-    hasPermission,  // Exportar la nueva función
+    hasPermission,
     login,
     logout
   };

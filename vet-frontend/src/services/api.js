@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/auth'; // Importar para acceder al estado
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080', // Ajusta esto a la URL de tu backend
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -43,10 +43,64 @@ export const dashboardService = {
   getProximasCitas: () => api.get('/api/citas/proximas')
 };
 
-// Servicio para usuarios
+// Servicio de usuarios con métodos para CRUD completo
 export const userService = {
-  register: (userData) => api.post('/api/auth/registro', userData),
-  getUsers: () => api.get('/api/usuarios'),
+  // Obtener todos los usuarios
+  getUsers: async () => {
+    try {
+      const response = await api.get('/api/usuarios');
+      return response;
+    } catch (error) {
+      console.error('Error al obtener usuarios:', error);
+      throw error;
+    }
+  },
+  
+  // Obtener un usuario por ID
+  getUserById: async (id) => {
+    try {
+      const response = await api.get(`/api/usuarios/${id}`);
+      return response;
+    } catch (error) {
+      console.error(`Error al obtener usuario con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Crear un nuevo usuario (registro)
+  register: async (userData) => {
+    try {
+      // Cambiar '/api/usuarios/registro' a '/api/usuarios'
+      const response = await api.post('/api/auth/registro', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error al registrar usuario:', error);
+      throw error;
+    }
+  },
+  
+  // Actualizar un usuario existente
+  updateUser: async (id, userData) => {
+    try {
+      const response = await api.put(`/api/usuarios/${id}`, userData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al actualizar usuario con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Eliminar un usuario
+  deleteUser: async (id) => {
+    try {
+      await api.delete(`/api/usuarios/${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Error al eliminar usuario con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  
   // Utilizar el nuevo endpoint para obtener veterinarios directamente
   getVeterinarios: async () => {
     try {
@@ -60,7 +114,26 @@ export const userService = {
   },
   // Método genérico para obtener usuarios por rol
   getUsersByRol: (rolNombre) => api.get(`/api/usuarios/rol/${rolNombre}/usuarios`),
-  // Añadir más funciones si es necesario (ej. getUserById, updateUser, deleteUser)
+  // Obtener el rol de un usuario específico
+  getUserRole: async (id) => {
+    try {
+      const response = await api.get(`/api/usuarios/${id}/rol`);
+      return response;
+    } catch (error) {
+      console.error(`Error al obtener rol del usuario con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  // Obtener usuarios por nombre de rol
+  getUsersByRoleName: async (roleName) => {
+    try {
+      const response = await api.get(`/api/usuarios/rol/${roleName}/usuarios`);
+      return response;
+    } catch (error) {
+      console.error(`Error al obtener usuarios con rol ${roleName}:`, error);
+      throw error;
+    }
+  }
 };
 
 // Servicio para roles
@@ -80,15 +153,88 @@ export const petService = {
 
 // Servicio para servicios médicos
 export const medicalServiceService = {
-  getAllServices: () => api.get('/api/servicios'),
-  getServiceById: (id) => api.get(`/api/servicios/${id}`),
-  getVeterinaryServices: () => api.get('/api/servicios/veterinarios'),
-  searchServicesByName: (nombre) => api.get('/api/servicios/buscar', { params: { nombre } }),
-  getServicesByMaxPrice: (precio) => api.get(`/api/servicios/precio/hasta/${precio}`),
-  getServicesByMinPrice: (precio) => api.get(`/api/servicios/precio/desde/${precio}`),
-  createService: (serviceData) => api.post('/api/servicios', serviceData),
-  updateService: (id, serviceData) => api.put(`/api/servicios/${id}`, serviceData),
-  deleteService: (id) => api.delete(`/api/servicios/${id}`)
+  getAllServices: async () => { // Modificar esta función
+    try {
+      const response = await api.get('/api/servicios');
+      return response.data; // Devolver response.data directamente
+    } catch (error) {
+      console.error('Error al obtener servicios:', error);
+      throw error; // Re-lanzar el error para que el componente lo maneje
+    }
+  },
+  getServiceById: async (id) => { // Asegurar consistencia en los demás si es necesario
+    try {
+      const response = await api.get(`/api/servicios/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al obtener servicio con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  getVeterinaryServices: async () => { // Asegurar consistencia
+    try {
+      const response = await api.get('/api/servicios/veterinarios');
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener servicios veterinarios:', error);
+      throw error;
+    }
+  },
+  searchServicesByName: async (nombre) => { // Asegurar consistencia
+    try {
+      const response = await api.get('/api/servicios/buscar', { params: { nombre } });
+      return response.data;
+    } catch (error) {
+      console.error(`Error al buscar servicios con nombre "${nombre}":`, error);
+      throw error;
+    }
+  },
+  getServicesByMaxPrice: async (precio) => { // Asegurar consistencia
+    try {
+      const response = await api.get(`/api/servicios/precio/hasta/${precio}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al buscar servicios con precio máximo ${precio}:`, error);
+      throw error;
+    }
+  },
+  getServicesByMinPrice: async (precio) => { // Asegurar consistencia
+    try {
+      const response = await api.get(`/api/servicios/precio/desde/${precio}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al buscar servicios con precio mínimo ${precio}:`, error);
+      throw error;
+    }
+  },
+  createService: async (serviceData) => { // Asegurar consistencia
+    try {
+      const response = await api.post('/api/servicios', serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('Error al crear servicio:', error);
+      throw error;
+    }
+  },
+  updateService: async (id, serviceData) => { // Asegurar consistencia
+    try {
+      const response = await api.put(`/api/servicios/${id}`, serviceData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al actualizar servicio con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  deleteService: async (id) => { // Asegurar consistencia
+    try {
+      // Delete no suele devolver datos, pero mantenemos la estructura por si acaso
+      await api.delete(`/api/servicios/${id}`);
+      return true; // O podrías devolver response.status si es relevante
+    } catch (error) {
+      console.error(`Error al eliminar servicio con ID ${id}:`, error);
+      throw error;
+    }
+  }
 };
 
 export default api;

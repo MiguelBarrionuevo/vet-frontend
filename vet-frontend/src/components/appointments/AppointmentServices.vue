@@ -114,8 +114,15 @@
 
 <script setup>
 import { ref, computed, defineProps, defineEmits, onMounted, watch } from 'vue';
-import citaServicioService from '../../services/citaServicioService';
-import { medicalServiceService } from '../../services/api';
+// Importar funciones nombradas de citaServicioService
+import {
+  getServiciosByCita,
+  addServicioToCita,
+  updateServicioInCita,
+  removeServicioFromCita
+} from '../../services/citaServicioService';
+// Importar el servicio dedicado para servicios médicos
+import serviceService from '../../services/serviceService';
 
 const props = defineProps({
   citaId: {
@@ -139,36 +146,61 @@ const isLoading = ref(false);
 
 // Calcular total
 const totalAmount = computed(() => {
-  return citaServicios.value.reduce((sum, item) => sum + item.precioTotal, 0);
+  // Asegurarse de que item.precioTotal es un número
+  return citaServicios.value.reduce((sum, item) => sum + (Number(item.precioTotal) || 0), 0);
 });
 
 // Formatear precio
 const formatPrice = (price) => {
-  return `$${Number(price).toLocaleString('es-CL')}`;
+  const numericPrice = Number(price);
+  // Devolver un string vacío o un placeholder si no es un número válido
+  if (isNaN(numericPrice)) {
+    return '$ --'; // O '$ 0' o lo que prefieras
+  }
+  return `$${numericPrice.toLocaleString('es-CL')}`;
 };
 
 // Cargar servicios disponibles
 const loadAvailableServices = async () => {
   try {
-    const services = await medicalServiceService.getAllServices();
-    availableServices.value = services;
+    // Usar el servicio dedicado
+    const services = await serviceService.getAllServices();
+    availableServices.value = Array.isArray(services) ? services : [];
   } catch (error) {
     console.error('Error al cargar servicios disponibles:', error);
+    availableServices.value = []; // Limpiar en caso de error
   }
 };
 
 // Cargar servicios de la cita
 const loadCitaServicios = async () => {
   if (!props.citaId) return;
-  
+
   isLoading.value = true;
-  
+
   try {
-    const services = await citaServicioService.getServiciosByCita(props.citaId);
-    citaServicios.value = Array.isArray(services) ? services : [];
+    const services = await getServiciosByCita(props.citaId);
+
+    citaServicios.value = (Array.isArray(services) ? services : []).map(citaServicio => {
+      const servicioAnidado = citaServicio.servicio || {};
+      const cantidadNum = Number(citaServicio.cantidad) || 1;
+      const precioUnitarioNum = Number(servicioAnidado.precio ?? citaServicio.precioUnitario) || 0;
+
+      const processedService = {
+        ...citaServicio,
+        nombreServicio: servicioAnidado.nombre ?? citaServicio.nombreServicio ?? 'Servicio Desconocido',
+        descripcionServicio: servicioAnidado.descripcion ?? citaServicio.descripcionServicio ?? '',
+        precioUnitario: precioUnitarioNum,
+        cantidad: cantidadNum,
+        precioTotal: precioUnitarioNum * cantidadNum,
+      };
+      return processedService;
+    });
     emit('update:services', citaServicios.value);
   } catch (error) {
     console.error(`Error al cargar servicios de la cita ${props.citaId}:`, error);
+    citaServicios.value = [];
+    emit('update:services', citaServicios.value);
   } finally {
     isLoading.value = false;
   }
@@ -176,25 +208,29 @@ const loadCitaServicios = async () => {
 
 // Agregar servicio a la cita
 const addService = async () => {
-  if (!selectedService.value || cantidad.value < 1) return;
-  
+  // Asegurarse de que selectedService y su precio existen y son números
+  if (!selectedService.value || isNaN(Number(selectedService.value.precio)) || cantidad.value < 1) return;
+
   const service = selectedService.value;
-  const precioTotal = service.precio * cantidad.value;
-  
+  const unitPrice = Number(service.precio);
+  const quantity = Number(cantidad.value);
+  const precioTotal = unitPrice * quantity;
+
   const citaServicioData = {
     citaId: props.citaId,
     servicioId: service.id,
-    cantidad: cantidad.value,
+    cantidad: quantity,
     nombreServicio: service.nombre,
     descripcionServicio: service.descripcion || '',
-    precioUnitario: service.precio,
+    precioUnitario: unitPrice,
     precioTotal: precioTotal
   };
-  
+
   try {
-    await citaServicioService.addServicioToCita(citaServicioData);
+    // Usar función importada
+    await addServicioToCita(citaServicioData);
     await loadCitaServicios(); // Recargar la lista
-    
+
     // Resetear selección
     selectedService.value = '';
     cantidad.value = 1;
@@ -205,11 +241,24 @@ const addService = async () => {
 
 // Actualizar cantidad de servicio
 const updateServiceQuantity = async (item) => {
+  // Asegurarse de que la cantidad y el precio unitario son números
+  const quantity = Number(item.cantidad);
+  const unitPrice = Number(item.precioUnitario);
+
+  if (isNaN(quantity) || quantity < 1 || isNaN(unitPrice)) {
+    // Si la cantidad no es válida, recargar para revertir
+    console.warn("Cantidad o precio unitario inválido detectado. Recargando servicios.");
+    await loadCitaServicios();
+    return;
+  }
+
   // Calcular nuevo precio total
-  item.precioTotal = item.precioUnitario * item.cantidad;
-  
+  item.cantidad = quantity; // Asegurar que la cantidad guardada es numérica
+  item.precioTotal = unitPrice * quantity;
+
   try {
-    await citaServicioService.updateServicioInCita(item);
+    // Usar función importada
+    await updateServicioInCita(item);
     emit('update:services', citaServicios.value);
   } catch (error) {
     console.error('Error al actualizar cantidad del servicio:', error);
@@ -221,7 +270,8 @@ const updateServiceQuantity = async (item) => {
 // Eliminar servicio de la cita
 const removeService = async (item) => {
   try {
-    await citaServicioService.removeServicioFromCita(props.citaId, item.servicioId);
+    // Usar función importada
+    await removeServicioFromCita(props.citaId, item.servicioId);
     await loadCitaServicios(); // Recargar la lista
   } catch (error) {
     console.error('Error al eliminar servicio de la cita:', error);

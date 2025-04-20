@@ -79,6 +79,19 @@
     
     <!-- Servicios médicos asociados -->
     <div class="p-6 border-b border-gray-200">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Servicios Médicos</h3>
+        <button 
+          v-if="canEdit && !isAppointmentCompleted"
+          @click="$emit('add-services')" 
+          class="bg-teal-600 text-white px-3 py-1 rounded-lg text-sm flex items-center hover:bg-teal-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Agregar Servicios
+        </button>
+      </div>
       <AppointmentServices 
         :citaId="appointment.id" 
         :isReadOnly="isAppointmentCompleted || !canEdit"
@@ -156,7 +169,14 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'edit-appointment', 'cancel-appointment', 'delete-appointment', 'complete-appointment']);
+const emit = defineEmits([
+  'back', 
+  'edit-appointment', 
+  'cancel-appointment', 
+  'delete-appointment', 
+  'complete-appointment',
+  'add-services'
+]);
 
 const authStore = useAuthStore();
 const showDeleteModal = ref(false);
