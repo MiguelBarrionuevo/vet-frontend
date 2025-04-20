@@ -15,7 +15,7 @@ const routes = [
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: () => import('../views/DashboardView.vue'),
+    component: () => import('../components/Dashboard.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -46,12 +46,6 @@ const routes = [
     path: '/billing',
     name: 'billing',
     component: () => import('../views/ServicesView.vue'), // Temporalmente usamos ServicesView
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/reports',
-    name: 'reports',
-    component: () => import('../views/DashboardView.vue'), // Temporalmente usamos DashboardView
     meta: { requiresAuth: true }
   },
   // 404 - Not Found

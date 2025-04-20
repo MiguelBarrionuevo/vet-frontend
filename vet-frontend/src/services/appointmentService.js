@@ -18,6 +18,52 @@ function formatTimeToISO(timeString) {
   return formattedTime;
 }
 
+// Función para procesar citas (normalizar formato)
+function procesarCitas(citas) {
+  if (!Array.isArray(citas)) return [];
+  
+  return citas.map(cita => {
+    // Formatear la hora desde el formato de objeto
+    let horaFormateada = '';
+    if (cita.hora) {
+      try {
+        // Verificar si es el formato con hour, minute, second, nano
+        if (cita.hora.hour !== undefined) {
+          // Usar valores sensatos para la hora (evitar valores extremos)
+          const hour = cita.hora.hour > 23 ? 0 : cita.hora.hour;
+          const minute = cita.hora.minute > 59 ? 0 : cita.hora.minute;
+          
+          // Formatear como HH:MM
+          horaFormateada = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        } else if (typeof cita.hora === 'string') {
+          // Si es una cadena, usar directamente
+          horaFormateada = cita.hora;
+        }
+      } catch (e) {
+        console.error('Error formateando hora:', e);
+      }
+    }
+    
+    return {
+      ...cita,
+      // Asegurar que la hora esté en formato string para la visualización
+      hora: horaFormateada,
+      // Crear referencias compatibles con el formato anterior
+      mascota: {
+        nombre: cita.mascotaNombre || '',
+        especie: cita.especie || '',
+        raza: cita.raza || ''
+      },
+      cliente: {
+        nombre: cita.clienteNombre || ''
+      },
+      usuario: {
+        nombre: cita.usuarioNombre || ''
+      }
+    };
+  });
+}
+
 const appointmentService = {
   // Obtener todas las citas
   getAllCitas: async () => {
@@ -55,8 +101,17 @@ const appointmentService = {
   // Obtener próximas citas
   getProximasCitas: async () => {
     try {
+      console.log('Solicitando próximas citas al endpoint /api/citas/proximas');
       const response = await api.get('/api/citas/proximas');
-      return response.data;
+      
+      // Validar que la respuesta sea un array
+      if (Array.isArray(response.data)) {
+        console.log('Próximas citas recibidas correctamente:', response.data);
+        return procesarCitas(response.data);
+      } else {
+        console.error('La respuesta no es un array:', response.data);
+        return [];
+      }
     } catch (error) {
       console.error('Error al obtener próximas citas:', error);
       throw error;
@@ -77,10 +132,25 @@ const appointmentService = {
   // Obtener citas por rango de fechas
   getCitasByFechaRange: async (fechaInicio, fechaFin) => {
     try {
+      console.log(`Solicitando citas desde ${fechaInicio} hasta ${fechaFin}`);
+      
+      // Verificar que las fechas estén en formato correcto
+      if (!fechaInicio || !fechaFin) {
+        throw new Error('Fechas de inicio o fin no proporcionadas');
+      }
+      
       const response = await api.get('/api/citas/fecha', {
         params: { fechaInicio, fechaFin }
       });
-      return response.data;
+      
+      // Validar que la respuesta sea un array
+      if (Array.isArray(response.data)) {
+        console.log(`Recibidas ${response.data.length} citas en el rango de fechas`);
+        return procesarCitas(response.data);
+      } else {
+        console.error('La respuesta no es un array:', response.data);
+        return [];
+      }
     } catch (error) {
       console.error(`Error al obtener citas por rango de fechas:`, error);
       throw error;

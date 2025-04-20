@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { dashboardService } from '../services/api';
+import appointmentService from '../services/appointmentService';
 import Sidebar from './Sidebar.vue'; // Importar el nuevo componente
 
 const authStore = useAuthStore();
@@ -84,38 +85,51 @@ const loadDashboardData = async () => {
       return;
     }
     
-    // Cargar estadísticas
-    const statsResponse = await dashboardService.getStats();
-    if (statsResponse.data) {
-      statistics.value[0].value = statsResponse.data.pacientesAtendidos;
-      statistics.value[1].value = statsResponse.data.citasDelDia;
-      statistics.value[2].value = statsResponse.data.vacunasAplicadas;
-      // Asumimos que ventas es un campo calculado o no disponible por ahora
+    // Cargar estadísticas y servicios
+    try {
+      const statsResponse = await dashboardService.getStats();
+      if (statsResponse.data) {
+        statistics.value[0].value = statsResponse.data.pacientesAtendidos;
+        statistics.value[1].value = statsResponse.data.citasDelDia;
+        statistics.value[2].value = statsResponse.data.vacunasAplicadas;
+      }
+      
+      const serviciosResponse = await dashboardService.getServicios();
+      if (serviciosResponse.data) {
+        services.value = serviciosResponse.data.map(servicio => {
+          const iconConfig = serviceIcons[servicio.nombre] || serviceIcons.default;
+          return {
+            name: servicio.nombre,
+            description: servicio.descripcion,
+            icon: iconConfig.icon,
+            color: iconConfig.color,
+            precio: formatCurrency(servicio.precio)
+          };
+        });
+      }
+    } catch (statsError) {
+      console.error('Error cargando estadísticas o servicios:', statsError);
+      // Continuar con la carga de citas aunque haya error en stats/servicios
     }
     
-    // Cargar servicios
-    const serviciosResponse = await dashboardService.getServicios();
-    if (serviciosResponse.data) {
-      services.value = serviciosResponse.data.map(servicio => {
-        const iconConfig = serviceIcons[servicio.nombre] || serviceIcons.default;
-        return {
-          name: servicio.nombre,
-          description: servicio.descripcion,
-          icon: iconConfig.icon,
-          color: iconConfig.color,
-          precio: formatCurrency(servicio.precio)
-        };
-      });
+    // Cargar próximas citas usando el servicio de citas
+    try {
+      console.log('Intentando cargar próximas citas...');
+      const citasResponse = await appointmentService.getProximasCitas();
+      
+      if (citasResponse && Array.isArray(citasResponse)) {
+        proximasCitas.value = citasResponse;
+        console.log('Citas cargadas correctamente:', proximasCitas.value.length);
+      } else {
+        console.warn('No se pudieron cargar las próximas citas o formato incorrecto');
+        proximasCitas.value = [];
+      }
+    } catch (citasError) {
+      console.error('Error durante la carga de próximas citas:', citasError);
+      proximasCitas.value = [];
     }
-    
-    // Cargar próximas citas
-    const citasResponse = await dashboardService.getProximasCitas();
-    if (citasResponse.data) {
-      proximasCitas.value = citasResponse.data;
-    }
-    
-  } catch (err) {
-    console.error('Error cargando datos del dashboard:', err);
+  } catch (generalError) {
+    console.error('Error general cargando datos del dashboard:', generalError);
     error.value = 'No se pudieron cargar los datos del dashboard. Por favor, intente más tarde.';
   } finally {
     loading.value = false;
@@ -124,6 +138,7 @@ const loadDashboardData = async () => {
 
 // Obtener el icono correspondiente a la especie de la mascota
 const getMascotaEmoji = (especie) => {
+  // Ahora verifica tanto la propiedad plana como la anidada
   return especieEmojis[especie] || especieEmojis.default;
 };
 
@@ -146,20 +161,57 @@ const getEstadoCitaClass = (estado) => {
 const formatFechaCita = (fecha, hora) => {
   if (!fecha) return 'No disponible';
   
-  // Determinar si es hoy
-  const fechaCita = new Date(fecha);
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  
-  if (fechaCita.getTime() === hoy.getTime()) {
-    return `Hoy, ${hora || 'hora no disponible'}`;
+  try {
+    // Determinar si es hoy
+    const fechaCita = new Date(fecha);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    // Formatear la hora correctamente
+    let horaFormateada = '';
+    
+    if (hora) {
+      if (typeof hora === 'string') {
+        // Asegurarse de que la hora tenga el formato correcto (HH:MM)
+        horaFormateada = hora.substring(0, 5);
+      } else if (hora.hour !== undefined) {
+        // Caso para el formato como objeto
+        const h = Math.min(Math.max(0, hora.hour), 23);
+        const m = Math.min(Math.max(0, hora.minute), 59);
+        horaFormateada = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    }
+    
+    if (fechaCita.getTime() === hoy.getTime()) {
+      return `Hoy, ${horaFormateada || 'hora no disponible'}`;
+    }
+    
+    // Determinar si es mañana
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+    
+    if (fechaCita.getTime() === manana.getTime()) {
+      return `Mañana, ${horaFormateada || 'hora no disponible'}`;
+    }
+    
+    // Formatear fecha para mostrar
+    return new Intl.DateTimeFormat('es-ES', {
+      day: 'numeric',
+      month: 'long'
+    }).format(fechaCita) + (horaFormateada ? `, ${horaFormateada}` : '');
+  } catch (error) {
+    console.error('Error formateando fecha de cita:', error);
+    return 'Fecha inválida';
   }
-  
-  // Formatear fecha para mostrar
-  return new Intl.DateTimeFormat('es-ES', {
-    day: 'numeric',
-    month: 'long'
-  }).format(fechaCita) + (hora ? `, ${hora}` : '');
+};
+
+// Nuevo método para acceder seguro a propiedades anidadas
+const safeGet = (obj, path, defaultValue = '') => {
+  try {
+    return path.split('.').reduce((o, p) => (o && o[p] !== undefined) ? o[p] : defaultValue, obj);
+  } catch (e) {
+    return defaultValue;
+  }
 };
 </script>
 
@@ -270,8 +322,11 @@ const formatFechaCita = (fecha, hora) => {
 
           <!-- Appointments Section -->
           <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
-            <div class="px-6 py-4 border-b border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h2 class="text-lg font-semibold text-gray-800">Próximas Citas</h2>
+              <div v-if="proximasCitas.length > 0" class="text-sm text-gray-500">
+                Mostrando {{ proximasCitas.length }} cita(s)
+              </div>
             </div>
             <div class="p-6">
               <div v-if="proximasCitas.length === 0" class="text-center py-8 text-gray-500">
@@ -284,7 +339,7 @@ const formatFechaCita = (fecha, hora) => {
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario</th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicio</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                     </tr>
                   </thead>
@@ -293,19 +348,31 @@ const formatFechaCita = (fecha, hora) => {
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                           <div class="h-10 w-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
-                            <span class="text-lg">{{ getMascotaEmoji(cita.mascota?.especie) }}</span>
+                            <span class="text-lg">{{ getMascotaEmoji(cita.especie || safeGet(cita, 'mascota.especie')) }}</span>
                           </div>
                           <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900">{{ cita.mascota?.nombre || 'Sin nombre' }}</div>
-                            <div class="text-sm text-gray-500">{{ cita.mascota?.raza || cita.mascota?.especie || 'Especie no especificada' }}</div>
+                            <div class="text-sm font-medium text-gray-900">
+                              {{ cita.mascotaNombre || safeGet(cita, 'mascota.nombre') || 'Sin nombre' }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              {{ cita.raza || cita.especie || safeGet(cita, 'mascota.raza') || safeGet(cita, 'mascota.especie') || 'Especie no especificada' }}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ cita.cliente?.nombre || 'No registrado' }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatFechaCita(cita.fecha, cita.hora) }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ cita.servicio?.nombre || 'No especificado' }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ cita.clienteNombre || safeGet(cita, 'cliente.nombre') || 'No registrado' }}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ formatFechaCita(cita.fecha, cita.hora) }}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ cita.motivo || safeGet(cita, 'servicio.nombre') || 'No especificado' }}
+                      </td>
                       <td class="px-6 py-4 whitespace-nowrap">
-                        <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getEstadoCitaClass(cita.estado)]">{{ cita.estado || 'Pendiente' }}</span>
+                        <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getEstadoCitaClass(cita.estado)]">
+                          {{ cita.estado || 'Pendiente' }}
+                        </span>
                       </td>
                     </tr>
                   </tbody>
