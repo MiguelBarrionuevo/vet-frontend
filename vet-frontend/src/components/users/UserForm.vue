@@ -176,10 +176,9 @@ const handleSubmit = () => {
               type="text"
               id="nombreUsuario"
               v-model="formData.nombreUsuario"
+              required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              :class="{'border-red-500': errors.nombreUsuario}"
             />
-            <p v-if="errors.nombreUsuario" class="mt-1 text-sm text-red-600">{{ errors.nombreUsuario }}</p>
           </div>
 
           <!-- Correo Electrónico -->
@@ -189,25 +188,27 @@ const handleSubmit = () => {
               type="email"
               id="correo"
               v-model="formData.correo"
+              required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              :class="{'border-red-500': errors.correo}"
             />
-            <p v-if="errors.correo" class="mt-1 text-sm text-red-600">{{ errors.correo }}</p>
           </div>
 
           <!-- Contraseña (solo para nuevos usuarios o cambio explícito) -->
-          <div v-if="showPasswordField">
+          <div>
             <label for="contrasena" class="block text-sm font-medium text-gray-700 mb-1">Contraseña*</label>
             <input
               type="password"
               id="contrasena"
               v-model="formData.contrasena"
+              required
+              minlength="8"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              :class="{'border-red-500': errors.contrasena}"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Ejemplo: Enero2025@"
+              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}"
+              title="Debe contener al menos una mayúscula, una minúscula, un número y un símbolo. Mínimo 8 caracteres."
             />
-            <p v-if="errors.contrasena" class="mt-1 text-sm text-red-600">{{ errors.contrasena }}</p>
-            <p v-else class="mt-1 text-xs text-gray-500">Debe contener al menos 8 caracteres.</p>
+            <p class="mt-1 text-xs text-gray-500">Debe contener al menos una mayúscula, una minúscula, un número y un símbolo.</p>
+
           </div>
 
           <!-- Opción para cambiar contraseña (solo para usuarios existentes) -->
@@ -229,14 +230,12 @@ const handleSubmit = () => {
               v-model="formData.rolId"
               @change="handleRoleChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-              :class="{'border-red-500': errors.rolId}"
             >
               <option value="" disabled>Seleccione un rol</option>
               <option v-for="rol in roles" :key="rol.id" :value="rol.id">
                 {{ rol.nombre?.replace('ROLE_', '').replace('_', ' ') || `Rol ID: ${rol.id}` }}
               </option>
             </select>
-            <p v-if="errors.rolId" class="mt-1 text-sm text-red-600">{{ errors.rolId }}</p>
           </div>
 
           <!-- Especialidad (Condicional) -->
