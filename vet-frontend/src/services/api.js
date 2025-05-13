@@ -22,8 +22,8 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    // Si el token es inválido o ha expirado (401 Unauthorized o 403 Forbidden), desloguear
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    // Solo cerrar sesión si es un error de autenticación (401), no de autorización (403)
+    if (error.response && error.response.status === 401) {
       const authStore = useAuthStore();
       // Solo desloguear si no es un error en la página de login
       if (window.location.pathname !== '/login') {

@@ -8,13 +8,82 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value);
 
-  // Propiedad computada para verificar si es admin
+  // Propiedad computada para verificar si es cualquier tipo de administrador
   const isAdmin = computed(() => {
     if (!user.value?.permissions) {
       return false;
     }
-    // Verificar si tiene el permiso ROLE_ADMIN
-    return user.value.permissions.includes('ROLE_ADMIN');
+    // Verificar si tiene cualquier rol de administrador (antiguo o nuevo)
+    return user.value.permissions.includes('ROLE_ADMIN') || 
+           user.value.permissions.includes('ROLE_ADMIN_SISTEMA') ||
+           user.value.permissions.includes('ROLE_ADMIN_USUARIOS') ||
+           user.value.permissions.includes('ROLE_ADMIN_VETERINARIA');
+  });
+
+  // Propiedad computada para verificar si es administrador del sistema
+  const isAdminSistema = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_ADMIN_SISTEMA');
+  });
+
+  // Propiedad computada para verificar si es administrador de usuarios
+  const isAdminUsuarios = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_ADMIN_USUARIOS') || user.value.permissions.includes('ROLE_ADMIN_SISTEMA');
+  });
+
+  // Propiedad computada para verificar si es administrador veterinario
+  const isAdminVeterinaria = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_ADMIN_VETERINARIA') || user.value.permissions.includes('ROLE_ADMIN_SISTEMA');
+  });
+
+  // Propiedad computada para verificar si es cualquier tipo de veterinario
+  const isVeterinario = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_VETERINARIO') || 
+           user.value.permissions.includes('ROLE_VETERINARIO_SENIOR') || 
+           user.value.permissions.includes('ROLE_VETERINARIO_JUNIOR');
+  });
+
+  // Propiedad computada para verificar si es gerente
+  const isGerente = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_GERENTE');
+  });
+
+  // Propiedad computada para verificar si es recepcionista
+  const isRecepcionista = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_RECEPCIONISTA');
+  });
+
+  // Propiedad computada para verificar si es asistente
+  const isAsistente = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_ASISTENTE');
+  });
+
+  // Propiedad computada para verificar si es consultor de datos
+  const isConsultorDatos = computed(() => {
+    if (!user.value?.permissions) {
+      return false;
+    }
+    return user.value.permissions.includes('ROLE_CONSULTOR_DATOS');
   });
 
   async function login(credentials) {
@@ -98,6 +167,14 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     isAdmin,
+    isAdminSistema,
+    isAdminUsuarios,
+    isAdminVeterinaria,
+    isVeterinario,
+    isGerente,
+    isRecepcionista,
+    isAsistente,
+    isConsultorDatos,
     hasPermission,
     login,
     logout

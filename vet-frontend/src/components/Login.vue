@@ -43,7 +43,7 @@ const togglePasswordVisibility = () => {
       <div class="text-center">
         <!-- Icono decorativo para la veterinaria -->
         <div class="mx-auto h-24 w-24 bg-teal-100 rounded-full flex items-center justify-center">
-          <img src="https://img.icons8.com/fluency/48/000000/pet.png" alt="Logo" class="h-14 w-14" />
+          <img src="../assets/pet.png" alt="Logo" class="h-14 w-14" />
         </div>
         <h1 class="mt-4 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-cyan-600">VetCare</h1>
         <p class="mt-3 text-gray-500 text-sm">Gestión de pacientes y servicios veterinarios</p>
