@@ -172,7 +172,9 @@ const toggleSidebar = () => {
                   required
                   minlength="8"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Ejemplo: Enero2025@"
+                  pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}"
+                  title="Debe contener al menos una mayúscula, una minúscula, un número y un símbolo. Mínimo 8 caracteres."
                 />
                  <p class="mt-1 text-xs text-gray-500">Debe contener al menos una mayúscula, una minúscula, un número y un símbolo.</p>
               </div>
