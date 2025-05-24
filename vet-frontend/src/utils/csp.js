@@ -13,17 +13,18 @@ export function generateNonce() {
 export const cspConfig = {
   development: {
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
-    'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-    'font-src': ["'self'", "https://fonts.gstatic.com", "data:"],
-    'img-src': ["'self'", "data:", "blob:", "https:"],
-    'connect-src': ["'self'", "http://localhost:8080", "ws://localhost:*", "ws://127.0.0.1:*"],
+    'script-src': ["'self'"],
+    'style-src': ["'self'", "https://fonts.googleapis.com"],
+    'font-src': ["'self'", "https://fonts.gstatic.com"],
+    'img-src': ["'self'", "data:", "blob:"],
+    'connect-src': ["'self'", "http://localhost:8080", "ws://localhost:5173", "ws://localhost:3000"],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
-    'form-action': ["'self'"]
+    'form-action': ["'self'"],
+    'object-src': ["'none'"]
   },  production: {
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'wasm-unsafe-eval'"],
+    'script-src': ["'self'"],
     'object-src': ["'none'"],
     'style-src': ["'self'", "https://fonts.googleapis.com"],
     'font-src': ["'self'", "https://fonts.gstatic.com"],
