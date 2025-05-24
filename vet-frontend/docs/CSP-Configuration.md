@@ -124,6 +124,31 @@ git push
 curl -I https://vet-frontend-dusky.vercel.app
 ```
 
+### Solución de Errores Comunes
+
+#### Error: Unmatched function pattern
+**Causa**: Configuración incorrecta de `functions` en `vercel.json`
+**Solución**: Para aplicaciones frontend estáticas, eliminar la sección `functions`
+
+```json
+// ❌ Incorrecto - no necesario para frontend estático
+{
+  "functions": {
+    "src/main.js": {
+      "maxDuration": 30
+    }
+  }
+}
+
+// ✅ Correcto - sin sección functions
+{
+  "headers": [...],
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [...]
+}
+```
+
 ## 📊 Nivel de Seguridad Alcanzado
 
 - ✅ **Prevención XSS**: Scripts bloqueados desde orígenes externos

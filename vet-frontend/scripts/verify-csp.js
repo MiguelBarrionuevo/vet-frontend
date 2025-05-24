@@ -19,6 +19,15 @@ async function verifyCspConfiguration() {
     const vercelPath = join(__dirname, '..', 'vercel.json');
     const vercelConfig = JSON.parse(await fs.readFile(vercelPath, 'utf8'));
     
+    // Verificar que no haya configuración de functions incorrecta
+    if (vercelConfig.functions) {
+      console.log('⚠️  Configuración de functions encontrada en vercel.json');
+      console.log('   Para aplicaciones frontend estáticas, esto no es necesario');
+      console.log('   Considera eliminar la sección "functions"\n');
+    } else {
+      console.log('✅ Configuración correcta: sin sección functions para frontend estático\n');
+    }
+    
     const cspHeader = vercelConfig.headers[0].headers.find(h => h.key === 'Content-Security-Policy');
     
     if (cspHeader) {

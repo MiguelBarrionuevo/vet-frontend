@@ -30,11 +30,6 @@
       ]
     }
   ],
-  "functions": {
-    "src/main.js": {
-      "maxDuration": 30
-    }
-  },
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
