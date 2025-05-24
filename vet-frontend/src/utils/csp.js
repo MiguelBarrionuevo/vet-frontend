@@ -23,11 +23,12 @@ export const cspConfig = {
     'form-action': ["'self'"]
   },  production: {
     'default-src': ["'self'"],
-    'script-src': ["'self'"],
-    'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-    'font-src': ["'self'", "https://fonts.gstatic.com", "data:"],
-    'img-src': ["'self'", "data:", "blob:", "https:"],
-    'connect-src': ["'self'", "https://vet-backend-production.up.railway.app", "https://*.vercel.app"],
+    'script-src': ["'self'", "'wasm-unsafe-eval'"],
+    'object-src': ["'none'"],
+    'style-src': ["'self'", "https://fonts.googleapis.com"],
+    'font-src': ["'self'", "https://fonts.gstatic.com"],
+    'img-src': ["'self'", "data:", "blob:"],
+    'connect-src': ["'self'", "https://vet-backend-production.up.railway.app"],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
