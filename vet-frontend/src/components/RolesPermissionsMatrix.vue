@@ -304,7 +304,13 @@ const deleteRole = async () => {
 const sortedRoles = computed(() => {
   if (!roles.value || roles.value.length === 0) return [];
   
-  return [...roles.value].sort((a, b) => {
+  // Filtrar roles para excluir el rol ADMIN
+  const filteredRoles = roles.value.filter(role => {
+    const roleName = (role.name || role.nombre || '').toString().toUpperCase();
+    return roleName !== 'ADMIN';
+  });
+  
+  return [...filteredRoles].sort((a, b) => {
     // Verificar si las propiedades existen antes de compararlas
     const nameA = a.name || a.nombre || '';
     const nameB = b.name || b.nombre || '';
