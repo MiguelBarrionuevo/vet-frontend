@@ -237,4 +237,11 @@ export const medicalServiceService = {
   }
 };
 
+export const logService = {  
+  downloadLogs: () => api.get('/api/logs/download', { responseType: 'blob' }),  
+  getTailLogs: (lines = 100) => api.get(`/api/logs/tail?lines=${lines}`),  
+  getLogsByLevel: (level, maxLines = 500) => api.get(`/api/logs/level/${level}?maxLines=${maxLines}`)  
+};
+
+
 export default api;

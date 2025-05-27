@@ -251,6 +251,18 @@ const toggleButtonClasses = computed(() => [
                 </svg>
                 <span :class="linkTextClasses">Gestión de Roles</span>
              </RouterLink>
+             <RouterLink  
+                v-if="authStore.isAdminSistema || authStore.isAdmin"  
+                to="/logs"  
+                :class="linkItemClasses"  
+                active-class="bg-teal-100 text-teal-700"  
+                :title="isCollapsed ? 'Logs del Sistema' : ''"  
+              >  
+                <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 h-5 w-5 text-gray-500 group-[.router-link-active]:text-teal-500" viewBox="0 0 20 20" fill="currentColor">  
+                  <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clip-rule="evenodd" />  
+                </svg>  
+                <span :class="linkTextClasses">Logs del Sistema</span>  
+              </RouterLink>
           </div>
 
           <!-- Sección específica para gestión administrativa -->

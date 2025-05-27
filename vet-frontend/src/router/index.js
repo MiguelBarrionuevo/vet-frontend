@@ -66,6 +66,12 @@ const routes = [
     component: () => import('../views/RolesManagement.vue'),
     meta: { requiresAuth: true }
   },
+  {  
+  path: '/logs',  
+  name: 'logs',  
+  component: () => import('../views/LogsManagement.vue'),  
+  meta: { requiresAuth: true }  
+  },
   // 404 - Not Found
   {
     path: '/:pathMatch(.*)*',
