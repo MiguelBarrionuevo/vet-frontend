@@ -25,6 +25,8 @@ const showPasswordField = ref(!props.user.id); // Mostrar campo de contraseña s
 // Datos del formulario
 const formData = reactive({
   id: props.user.id || null,
+  nombre: props.user.nombre || '',           // NUEVO  
+  apellido: props.user.apellido || '',       // NUEVO  
   nombreUsuario: props.user.nombreUsuario || '',
   correo: props.user.correo || '',
   contrasena: '', // Solo se usa para nuevos usuarios
@@ -34,6 +36,8 @@ const formData = reactive({
 
 // Errores de validación
 const errors = reactive({
+  nombre: '',        // NUEVO  
+  apellido: '',      // NUEVO  
   nombreUsuario: '',
   correo: '',
   contrasena: '',
@@ -64,56 +68,104 @@ onMounted(async () => {
   }
 });
 
-// Manejar cambio de rol
-const handleRoleChange = () => {
-  const selectedRole = roles.value.find(r => r.id === parseInt(formData.rolId));
-  showEspecialidad.value = selectedRole?.nombre === 'ROLE_VETERINARIO';
-  if (!showEspecialidad.value) {
-    formData.especialidad = '';
-  }
-};
+// Función para generar nombre de usuario automáticamente  
+const generateUsername = () => {  
+  if (!formData.nombre || !formData.apellido || !formData.rolId) return;  
+    
+  const selectedRole = roles.value.find(r => r.id === parseInt(formData.rolId));  
+  const roleName = selectedRole?.nombre || '';  
+    
+  let prefix = '';  
+  switch (roleName) {  
+    case 'ROLE_VETERINARIO':  
+      prefix = 'vet';  
+      break;  
+    case 'ROLE_GERENTE':  
+      prefix = 'ger';  
+      break;  
+    case 'ROLE_RECEPCIONISTA':  
+      prefix = 'rec';  
+      break;  
+    case 'ROLE_ADMIN':  
+    case 'ROLE_ADMIN_SISTEMA':  
+    case 'ROLE_ADMIN_USUARIOS':  
+      prefix = 'admin';  
+      break;  
+    default:  
+      prefix = 'user';  
+  }  
+    
+  const nombre = formData.nombre.toLowerCase().replace(/\s+/g, '');  
+  const apellido = formData.apellido.toLowerCase().replace(/\s+/g, '');  
+  formData.nombreUsuario = `${prefix}_${apellido}_${nombre}`;  
+}; 
 
-// Validar formulario
-const validateForm = () => {
-  let isValid = true;
-  
-  // Reiniciar errores
-  Object.keys(errors).forEach(key => {
-    errors[key] = '';
-  });
-  
-  // Validar nombre de usuario
-  if (!formData.nombreUsuario.trim()) {
-    errors.nombreUsuario = 'El nombre de usuario es obligatorio';
-    isValid = false;
-  }
-  
-  // Validar correo
-  if (!formData.correo.trim()) {
-    errors.correo = 'El correo electrónico es obligatorio';
-    isValid = false;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
-    errors.correo = 'El correo electrónico no es válido';
-    isValid = false;
-  }
-  
-  // Validar contraseña (solo para nuevos usuarios)
-  if (!props.user.id && !formData.contrasena) {
-    errors.contrasena = 'La contraseña es obligatoria';
-    isValid = false;
-  } else if (!props.user.id && formData.contrasena.length < 8) {
-    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres';
-    isValid = false;
-  }
-  
-  // Validar rol
-  if (!formData.rolId) {
-    errors.rolId = 'Debe seleccionar un rol';
-    isValid = false;
-  }
-  
-  return isValid;
-};
+// Manejar cambio de rol
+const handleRoleChange = () => {  
+  const selectedRole = roles.value.find(r => r.id === parseInt(formData.rolId));  
+  showEspecialidad.value = selectedRole?.nombre === 'ROLE_VETERINARIO';  
+  if (!showEspecialidad.value) {  
+    formData.especialidad = '';  
+  }  
+  generateUsername(); // Regenerar username cuando cambia el rol  
+};  
+
+// Validar formulario  
+const validateForm = () => {  
+  let isValid = true;  
+    
+  // Reiniciar errores  
+  Object.keys(errors).forEach(key => {  
+    errors[key] = '';  
+  });  
+    
+  // Validar nombre  
+  if (!formData.nombre.trim()) {  
+    errors.nombre = 'El nombre es obligatorio';  
+    isValid = false;  
+  }  
+    
+  // Validar apellido  
+  if (!formData.apellido.trim()) {  
+    errors.apellido = 'El apellido es obligatorio';  
+    isValid = false;  
+  }  
+    
+  // Validar nombre de usuario  
+  if (!formData.nombreUsuario.trim()) {  
+    errors.nombreUsuario = 'El nombre de usuario es obligatorio';  
+    isValid = false;  
+  }  
+    
+  // Validar correo con estándar @vetcare.com  
+  if (!formData.correo.trim()) {  
+    errors.correo = 'El correo electrónico es obligatorio';  
+    isValid = false;  
+  } else if (!formData.correo.endsWith('@vetcare.com')) {  
+    errors.correo = 'El correo debe terminar con @vetcare.com';  
+    isValid = false;  
+  } else if (!/^[^\s@]+@vetcare\.com$/.test(formData.correo)) {  
+    errors.correo = 'El formato del correo no es válido';  
+    isValid = false;  
+  }  
+    
+  // Validar contraseña (solo para nuevos usuarios)  
+  if (!props.user.id && !formData.contrasena) {  
+    errors.contrasena = 'La contraseña es obligatoria';  
+    isValid = false;  
+  } else if (!props.user.id && formData.contrasena.length < 8) {  
+    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres';  
+    isValid = false;  
+  }  
+    
+  // Validar rol  
+  if (!formData.rolId) {  
+    errors.rolId = 'Debe seleccionar un rol';  
+    isValid = false;  
+  }  
+    
+  return isValid;  
+};  
 
 // Manejar envío del formulario
 const handleSubmit = () => {
@@ -169,29 +221,64 @@ const handleSubmit = () => {
 
       <form v-else @submit.prevent="handleSubmit">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Nombre de Usuario -->
-          <div>
-            <label for="nombreUsuario" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario*</label>
-            <input
-              type="text"
-              id="nombreUsuario"
-              v-model="formData.nombreUsuario"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            />
-          </div>
+          <!-- Nombre (NUEVO) -->  
+          <div>  
+            <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre*</label>  
+            <input  
+              type="text"  
+              id="nombre"  
+              v-model="formData.nombre"  
+              @input="generateUsername"  
+              required  
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"  
+              :class="{ 'border-red-300': errors.nombre }"  
+            />  
+            <p v-if="errors.nombre" class="mt-1 text-sm text-red-600">{{ errors.nombre }}</p>  
+          </div>  
+          <!-- Apellido (NUEVO) -->  
+          <div>  
+            <label for="apellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido*</label>  
+            <input  
+              type="text"  
+              id="apellido"  
+              v-model="formData.apellido"  
+              @input="generateUsername"  
+              required  
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"  
+              :class="{ 'border-red-300': errors.apellido }"  
+            />  
+            <p v-if="errors.apellido" class="mt-1 text-sm text-red-600">{{ errors.apellido }}</p>  
+          </div> 
+          <!-- Nombre de Usuario (MODIFICADO) -->  
+          <div>  
+            <label for="nombreUsuario" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario*</label>  
+            <input  
+              type="text"  
+              id="nombreUsuario"  
+              v-model="formData.nombreUsuario"  
+              readonly  
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-50 text-gray-600"  
+              placeholder="Se genera automáticamente"  
+            />  
+            <p class="mt-1 text-xs text-gray-500">Se genera automáticamente basado en el rol, nombre y apellido</p>  
+            <p v-if="errors.nombreUsuario" class="mt-1 text-sm text-red-600">{{ errors.nombreUsuario }}</p>  
+          </div>  
 
-          <!-- Correo Electrónico -->
-          <div>
-            <label for="correo" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico*</label>
-            <input
-              type="email"
-              id="correo"
-              v-model="formData.correo"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            />
-          </div>
+          <!-- Correo Electrónico (MODIFICADO) -->  
+          <div>  
+            <label for="correo" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico*</label>  
+            <input  
+              type="email"  
+              id="correo"  
+              v-model="formData.correo"  
+              required  
+              placeholder="usuario@vetcare.com"  
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"  
+              :class="{ 'border-red-300': errors.correo }"  
+            />  
+            <p class="mt-1 text-xs text-gray-500">Debe terminar con @vetcare.com</p>  
+            <p v-if="errors.correo" class="mt-1 text-sm text-red-600">{{ errors.correo }}</p>  
+          </div>  
 
           <!-- Contraseña (solo para nuevos usuarios o cambio explícito) -->
           <div>
